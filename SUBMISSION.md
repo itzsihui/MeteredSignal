@@ -80,16 +80,17 @@ Without Arc + Circle nanopayments, the agent never closes the loop from intellig
 
 | What | URL |
 |------|-----|
-| Public repo | https://github.com/itzsihui/xagent |
-| Demo UI (local) | http://localhost:3001 |
-| Public tunnel (cloudflared → :3001) | https://traditions-faced-honors-popularity.trycloudflare.com |
-| Merchant catalog | http://localhost:4021/v1/catalog |
+| Public repo | https://github.com/itzsihui/MeteredSignal |
+| **Production demo (Vercel)** | https://meteredsignal.vercel.app |
+| Demo UI path | https://meteredsignal.vercel.app/demo |
+| Merchant catalog | https://meteredsignal.vercel.app/v1/catalog |
+| Local (dev) | http://localhost:3001 |
 | Blocky402 facilitator | https://api.testnet.blocky402.com/supported |
 | HCS audit topic | https://hashscan.io/testnet/topic/0.0.10505288 |
 | Demo script | [DEMO.md](./DEMO.md) |
 | Architecture + setup | [README.md](./README.md) |
 
-**Live demo hosting:** We expose the local agent UI + APIs with a **Cloudflare quick tunnel** (`cloudflared tunnel --url http://localhost:3001`). Restart the tunnel before final submit and paste the fresh `*.trycloudflare.com` URL here / in the ETHGlobal form (quick tunnels rotate and die).
+**Live demo hosting:** Production is on **Vercel** (`meteredsignal.vercel.app`) — static landing + `/demo` UI, serverless Express for `/api` + `/v1` (Hedera x402 merchant + agent in one deployment). Env secrets live in the Vercel project; `MERCHANT_URL=https://meteredsignal.vercel.app`.
 
 **Video:** ≤5 min — Arc budget → Hedera 402 settle → multi-protocol Graph + freshness / ranking → GO → Circle nanopayment on ArcScan + HashScan / HCS (see DEMO.md). Include the freshness-fail beat (simulate indexer lag → UNAVAILABLE → refuse spend).
 

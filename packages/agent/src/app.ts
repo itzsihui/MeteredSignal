@@ -10,6 +10,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function resolveMerchantUrl(): string {
   if (process.env.MERCHANT_URL?.trim()) return process.env.MERCHANT_URL.trim().replace(/\/$/, '');
+  // Stable production alias when available (avoids ephemeral *.vercel.app self-fetch HTML)
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/^https?:\/\//, '')}`;
+  }
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}`;
   return 'http://localhost:4021';
 }

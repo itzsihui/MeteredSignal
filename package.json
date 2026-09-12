@@ -12,9 +12,10 @@
     "dev": "concurrently --names merchant,agent,web --prefix-colors cyan,magenta,green \"npm run merchant\" \"npm run agent\" \"npm run web\"",
     "build": "npm run build --workspaces --if-present",
     "build:web": "npm run build --workspace=web",
+    "build:vercel": "bash scripts/build-vercel.sh",
     "associate": "npm run associate --workspace=scripts",
     "create-topic": "npm run create-topic --workspace=scripts",
-    "deploy:vercel": "npm run build:web && vercel --prod"
+    "deploy:vercel": "npm run build:vercel && vercel --prod"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

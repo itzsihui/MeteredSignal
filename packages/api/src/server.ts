@@ -2,8 +2,8 @@ import { config } from 'dotenv';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import express, { type Express } from 'express';
-import { createMerchantApp } from '../merchant/src/app.js';
-import { createAgentApp, resolveMerchantUrl } from '../agent/src/app.js';
+import { createMerchantApp } from '../../merchant/src/app.js';
+import { createAgentApp, resolveMerchantUrl } from '../../agent/src/app.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, '../../.env') });
@@ -15,7 +15,9 @@ config({ path: resolve(__dirname, '../../.env') });
 export function createCombinedApp(): Express {
   const merchantUrl = resolveMerchantUrl();
   const merchant = createMerchantApp();
-  const agent = createAgentApp({ merchantUrl, serveStatic: true });
+  // On Vercel, static UI is served from /public — API process only needs routes.
+  const serveStatic = !process.env.VERCEL;
+  const agent = createAgentApp({ merchantUrl, serveStatic });
 
   const app = express();
   app.use((req, res, next) => {

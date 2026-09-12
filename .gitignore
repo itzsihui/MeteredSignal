@@ -1,5 +1,6 @@
 node_modules
 dist
+public
 .env
 .DS_Store
 .next
@@ -7,6 +8,7 @@ dist
 .ref-x402
 getKey.js
 .vercel
+.env.local
 
 # 4K GetLayers masters (55MB+) — landing uses compressed landing/assets/
 metal-human 2/

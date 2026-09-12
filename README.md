@@ -66,6 +66,8 @@ npm run dev
 - Agent API: http://localhost:3001  
 - **Web UI (shadcn + Aceternity + React Bits):** http://localhost:5173  
 
+**Production:** https://meteredsignal.vercel.app (landing `/`, demo `/demo`) — `npm run deploy:vercel`
+
 Fill `.env` before `npm run dev` — merchant exits if Hedera service account or Graph API key is missing.
 
 ### Smoke tests
