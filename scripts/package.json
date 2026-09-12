@@ -1,0 +1,17 @@
+{
+  "name": "@meteredsignal/scripts",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "associate": "tsx associate-token.ts",
+    "create-topic": "tsx create-hcs-topic.ts"
+  },
+  "dependencies": {
+    "@hiero-ledger/sdk": "^2.85.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.4"
+  }
+}

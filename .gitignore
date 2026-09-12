@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.DS_Store
+.next
+*.log
+.ref-x402
+getKey.js

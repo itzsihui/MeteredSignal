@@ -84,38 +84,38 @@ flowchart LR
 
 ### Hour 0–2 — Scaffold
 
-- [ ] Fork/compose Hedera x402 PoC (merchant) + Arc Agent Stack / nanopayments (buyer)
-- [ ] Fund Hedera testnet (HBAR) + Arc testnet USDC / Circle agent wallet
-- [ ] Create Graph Subgraph Studio API key
-- [ ] Verify Blocky402: `curl https://api.testnet.blocky402.com/supported`
+- [x] Fork/compose Hedera x402 PoC (merchant) + Arc Agent Stack / nanopayments (buyer)
+- [x] Fund Hedera testnet (HBAR) + Arc testnet USDC / Circle agent wallet
+- [x] Create Graph Subgraph Studio API key
+- [x] Verify Blocky402: `curl https://api.testnet.blocky402.com/supported`
 
 ### Hour 2–8 — Merchant (Hedera x402 + Graph)
 
-- [ ] Replace inference payload with Graph-backed endpoints, e.g.:
+- [x] Replace inference payload with Graph-backed endpoints, e.g.:
   - `GET /v1/wallet-risk?address=`
   - `GET /v1/lending-compare`
-- [ ] Use Messari Standardized Subgraphs — one query shape, ≥2 protocols
-- [ ] Enforce freshness: require `_meta.block.number`; pin deployment IDs; return `unavailable` if stale
-- [ ] Metered per-call pricing (not flat-only)
-- [ ] Optional: append settlement tx id to an HCS topic (audit trail extra points)
+- [x] Use Messari Standardized Subgraphs — one query shape, ≥2 protocols
+- [x] Enforce freshness: require `_meta.block.number`; pin deployment IDs; return `unavailable` if stale
+- [x] Metered per-call pricing (not flat-only)
+- [x] Optional: append settlement tx id to an HCS topic (audit trail extra points)
 
 ### Hour 8–14 — Buyer (Arc Agent Stack)
 
-- [ ] Agent takes a natural-language goal (“Is this wallet safe to lend against?”)
-- [ ] Discovers / pays the Hedera x402 endpoint (honest, demoable payment path)
-- [ ] Uses returned Graph evidence in the decision
-- [ ] On GO: small USDC App Kit send/swap on Arc Testnet
-- [ ] Show wallet policy / spend limit (Agent Stack guardrails)
+- [x] Agent takes a natural-language goal (“Is this wallet safe to lend against?”)
+- [x] Discovers / pays the Hedera x402 endpoint (honest, demoable payment path)
+- [x] Uses returned Graph evidence in the decision
+- [x] On GO: small USDC App Kit send/swap on Arc Testnet
+- [x] Show wallet policy / spend limit (Agent Stack guardrails)
 
 ### Hour 14–18 — Product surface
 
-- [ ] Minimal Next.js UI: paste address → agent run log → payment receipts → decision
-- [ ] Architecture diagram in README
-- [ ] Public GitHub with clear “how each sponsor is load-bearing”
+- [x] Minimal Next.js UI: paste address → agent run log → payment receipts → decision
+- [x] Architecture diagram in README
+- [x] Public GitHub with clear “how each sponsor is load-bearing”
 
 ### Hour 18–22 — Demo + submit
 
-- [ ] Record ≤4–5 min video (script below)
+- [ ] Record ≤4–5 min video (script in DEMO.md)
 - [ ] Submit partners: **The Graph, Hedera, Arc**
 - [ ] Name bounties explicitly: Hedera Agentic Payments, Graph AI + Composable, Arc Agentic + Launch
 - [ ] Fill partner feedback fields honestly
@@ -128,20 +128,23 @@ flowchart LR
 
 ## Demo video script (≤5 min)
 
+See **DEMO.md** (canonical). Summary:
+
 1. Agent starts on Arc with a USDC budget
 2. Hits paywalled Graph intelligence → 402 → pays on Hedera (Blocky402)
-3. Shows multi-protocol Graph response + freshness check failing, then succeeding
-4. Agent decides and executes an Arc USDC action
-5. Show HashScan + Arc explorer receipts
+3. Shows multi-protocol Graph response + freshness check
+4. Agent decides and executes an Arc USDC action (GO-only + spend cap)
+5. Show HashScan payer + **HCS audit topic** + ArcScan receipt
 
 ---
 
 ## Qualification checklist
 
-- [ ] Live Graph provider data (Studio key) — no mocks
-- [ ] ≥2 standardized protocol deployments, one query pattern
-- [ ] Real Hedera x402 settle through Blocky402
-- [ ] Real Arc Agent Stack + USDC path
+- [x] Live Graph provider data (Studio key) — no mocks
+- [x] ≥2 standardized protocol deployments, one query pattern
+- [x] Real Hedera x402 settle through Blocky402
+- [x] Real Arc USDC path (GO + spend policy)
+- [x] HCS settlement audit topic
 - [ ] Public repo + architecture diagram + demo video
 - [ ] Partner feedback fields completed
 
