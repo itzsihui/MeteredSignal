@@ -13,13 +13,15 @@
     "build": "npm run build --workspaces --if-present",
     "build:web": "npm run build --workspace=web",
     "associate": "npm run associate --workspace=scripts",
-    "create-topic": "npm run create-topic --workspace=scripts"
+    "create-topic": "npm run create-topic --workspace=scripts",
+    "deploy:vercel": "npm run build:web && vercel --prod"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@hashgraph/sdk": "^2.81.0"
+    "@hashgraph/sdk": "^2.81.0",
+    "express": "^4.21.2"
   }
 }

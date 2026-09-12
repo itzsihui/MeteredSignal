@@ -70,7 +70,12 @@ function loadPolicy(
 }
 
 function goActionUrl(): string {
-  const base = (process.env.MERCHANT_URL ?? 'http://localhost:4021').replace(/\/$/, '');
+  const fromEnv = process.env.MERCHANT_URL?.trim();
+  const base = (
+    fromEnv ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}` : null) ||
+    'http://localhost:4021'
+  ).replace(/\/$/, '');
   const qs = new URLSearchParams({ verdict: 'GO' });
   return `${base}/v1/arc/usdc/go-action?${qs}`;
 }

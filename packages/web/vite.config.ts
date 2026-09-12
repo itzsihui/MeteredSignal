@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import type { ServerResponse } from 'node:http'
 import { fileURLToPath } from 'node:url'
-import type { Connect, Plugin } from 'vite'
+import type { Plugin } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -11,7 +12,7 @@ const landingDir = path.resolve(rootDir, '../../landing')
 const landingIndex = path.join(landingDir, 'index.html')
 const landingAssets = path.join(landingDir, 'assets')
 
-function sendFile(res: Connect.ServerResponse, filePath: string, type: string) {
+function sendFile(res: ServerResponse, filePath: string, type: string) {
   res.statusCode = 200
   res.setHeader('Content-Type', type)
   fs.createReadStream(filePath).pipe(res)
