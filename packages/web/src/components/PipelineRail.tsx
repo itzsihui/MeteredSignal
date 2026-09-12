@@ -53,7 +53,7 @@ export function PipelineRail({
                 className={cn(
                   'relative z-[1] flex h-8 w-8 items-center justify-center self-center rounded-full border text-xs font-semibold',
                   current && 'border-primary bg-primary text-primary-foreground',
-                  done && !current && 'border-teal-600 bg-teal-700 text-white',
+                  done && !current && 'border-[#9ec0ff]/50 bg-[#9ec0ff]/25 text-[#e8efff]',
                   !done && !current && 'border-white/20 bg-background/60 text-muted-foreground',
                 )}
               >

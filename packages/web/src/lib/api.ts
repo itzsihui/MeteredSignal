@@ -21,6 +21,7 @@ export async function runAgentStream(opts: {
   mode: RunMode
   address?: string
   slugs?: string[]
+  forceStale?: boolean
   onStage: (event: StageEvent) => void
   onHello?: (data: { merchant: string; hederaPayer: string }) => void
   signal?: AbortSignal
@@ -32,6 +33,7 @@ export async function runAgentStream(opts: {
       mode: opts.mode,
       address: opts.address,
       slugs: opts.slugs,
+      forceStale: opts.forceStale,
     }),
     signal: opts.signal,
   })

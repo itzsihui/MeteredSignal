@@ -5,7 +5,7 @@ export function EventLog({ entries }: { entries: LogEntry[] }) {
   return (
     <div className="flex h-[22rem] flex-col overflow-hidden rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-        <span className="font-mono text-[11px] tracking-wide text-teal-300">backend.process</span>
+        <span className="font-mono text-[11px] tracking-wide text-[#9ec0ff]">backend.process</span>
         <span className="font-mono text-[10px] text-white/40">{entries.length} events</span>
       </div>
       <div className="flex-1 space-y-1 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed">
@@ -22,7 +22,7 @@ export function EventLog({ entries }: { entries: LogEntry[] }) {
                 e.kind === 'graph' && 'text-sky-300',
                 e.kind === 'arc' && 'text-orange-300',
                 e.kind === 'error' && 'text-rose-300',
-                e.kind === 'info' && 'text-teal-200',
+                e.kind === 'info' && 'text-[#c9daff]',
               )}
             >
               {e.kind}

@@ -6,3 +6,6 @@ dist
 *.log
 .ref-x402
 getKey.js
+
+# 4K GetLayers masters (55MB+) — landing uses compressed landing/assets/
+metal-human 2/

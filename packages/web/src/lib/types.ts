@@ -46,7 +46,26 @@ export type LendingSignal = {
   queryTemplate?: string
   maxBlockLag?: number
   fetchedAt?: string
+  freshnessDemo?: boolean
   protocols?: ProtocolSnapshot[]
+  decision?: {
+    verdict: string
+    riskScore: number
+    reasons: string[]
+    recommendation?: {
+      preferSlug: string
+      preferProtocol: string
+      summary: string
+      ranking: Array<{
+        slug: string
+        protocol: string
+        tvlUsd: number
+        borrowUsd: number
+        depositUsd: number
+        utilization: number
+      }>
+    }
+  }
   decisionHint?: { actionable: boolean; summary: string }
   hederaAudit?: unknown
 }
@@ -55,6 +74,7 @@ export type WalletSignal = {
   address?: string
   queryTemplate?: string
   fetchedAt?: string
+  freshnessDemo?: boolean
   positions?: WalletPosition[]
   decision?: { verdict: string; riskScore: number; reasons: string[] }
   hederaAudit?: unknown
@@ -67,11 +87,14 @@ export type ArcResult = {
   chainId?: number
   explorerUrl?: string
   balanceUsdc?: string
+  gatewayBalanceUsdc?: string
+  nanopay?: { amount?: string; settlementTx?: string; data?: unknown }
   policy?: {
     requireGoVerdict: true
     maxSpendUsdc: string
     treasury: string | null
     agentWallet: string | null
+    stack?: 'circle-nanopayments' | 'native-fallback'
   }
 }
 

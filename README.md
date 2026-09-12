@@ -54,7 +54,7 @@ Set in `.env`:
 - `HEDERA_AGENT_ACCOUNT_ID` / `HEDERA_AGENT_PRIVATE_KEY`
 - `GRAPH_API_KEY`
 - `X402_TESTNET_FACILITATOR_URL=https://api.testnet.blocky402.com`
-- `ARC_RPC_URL=https://rpc.testnet.arc.io`, `ARC_AGENT_PRIVATE_KEY`, `ARC_TREASURY_ADDRESS`
+- `ARC_RPC_URL=https://rpc.testnet.arc.io`, `ARC_CHAIN_ID=5042002`, `ARC_EXPLORER_URL=https://testnet.arcscan.app`, `ARC_AGENT_PRIVATE_KEY`, `ARC_TREASURY_ADDRESS`
 
 ### 3. Run
 
@@ -83,13 +83,14 @@ curl -s https://api.testnet.blocky402.com/supported | jq .
 
 ## Why this wins for judges
 
-- **Graph:** one Messari query template across Aave v3 / Compound v3 / Spark; rejects stale `_meta`.
+- **Graph:** one Messari query template across Aave v3 / Compound v3 / Spark; rejects stale `_meta`; agent ranks liquidity and returns GO / NO_GO / UNAVAILABLE (not a raw dump). Demo tip-lag via `forceStale` for the video freshness beat.
 - **Hedera:** live x402-gated service settled through **Blocky402**; metered HBAR prices; **HCS payment audit trail**.
 - **Arc:** agent only spends USDC after a GO verdict, with an explicit spend-cap policy.
 
 ## Demo + submit
 
-See [DEMO.md](./DEMO.md) for the video script, qualification curls, and bounty names to paste into the ETHGlobal form.
+- **One-page writeup (paste into ETHGlobal):** [SUBMISSION.md](./SUBMISSION.md) — problem → architecture → sponsor load-bearing → links  
+- **Video + pre-flight:** [DEMO.md](./DEMO.md)
 
 ## Repo layout
 
@@ -102,9 +103,11 @@ packages/
 scripts/      HTS associate + create HCS topic
 ```
 
-## Mainnet readiness (Arc Launch track)
+## Mainnet readiness (Arc Launch track — $2.5k by Sep 30)
 
-Deploy merchant + agent against Arc mainnet RPC / USDC when Arc mainnet is live (target before **Sept 30** for the mainnet unlock portion of Arc prizes). Keep the same decision → spend flow; swap env URLs and addresses only.
+**Playbook:** [ARC_MAINNET.md](./ARC_MAINNET.md)
+
+Arc Public Testnet is live today; mainnet RPC/chain ID are not published yet. When they are, flip Arc env only (`ARC_RPC_URL`, `ARC_CHAIN_ID`, `ARC_EXPLORER_URL`, `ARC_IS_MAINNET=true`, funded mainnet key + treasury). Same GO-only + spend-cap flow — no product rewrite. Save the mainnet ArcScan tx as unlock evidence.
 
 Create HCS topic (once):
 

@@ -23,6 +23,8 @@ type RunBody = {
   mode?: 'lending-compare' | 'wallet-risk';
   address?: string;
   slugs?: string[];
+  /** Demo tip-lag so judges can see freshness reject → refuse spend. */
+  forceStale?: boolean;
 };
 
 type PipelineStage =
@@ -103,18 +105,20 @@ app.get('/api/catalog', async (_req, res) => {
 
 function buildMerchantUrl(body: RunBody): { url: string; mode: 'lending-compare' | 'wallet-risk' } | { error: string } {
   const mode = body.mode ?? 'lending-compare';
+  const qs = new URLSearchParams();
+  if (body.slugs?.length) qs.set('slugs', body.slugs.join(','));
+  if (body.forceStale) qs.set('forceStale', '1');
+
   if (mode === 'wallet-risk') {
     if (!body.address || !/^0x[a-fA-F0-9]{40}$/.test(body.address)) {
       return { error: 'address required for wallet-risk' };
     }
-    const qs = new URLSearchParams({ address: body.address });
-    if (body.slugs?.length) qs.set('slugs', body.slugs.join(','));
+    qs.set('address', body.address);
     return { url: `${MERCHANT_URL}/v1/testnet/hbar/wallet-risk?${qs}`, mode };
   }
-  const qs = new URLSearchParams();
-  if (body.slugs?.length) qs.set('slugs', body.slugs.join(','));
+  const q = qs.toString();
   return {
-    url: `${MERCHANT_URL}/v1/testnet/hbar/lending-compare${qs.toString() ? `?${qs}` : ''}`,
+    url: `${MERCHANT_URL}/v1/testnet/hbar/lending-compare${q ? `?${q}` : ''}`,
     mode,
   };
 }
@@ -164,15 +168,37 @@ async function executeRun(
   }
 
   track('querying_graph', 'Messari standardized subgraphs returned');
-  track('freshness_gate', 'Evaluating _meta block freshness');
+
+  const lending = signal as {
+    freshnessDemo?: boolean;
+    decision?: { verdict?: 'GO' | 'NO_GO' | 'UNAVAILABLE'; reasons?: string[]; recommendation?: { summary?: string } };
+    decisionHint?: { actionable?: boolean; summary?: string };
+    protocols?: Array<{ status?: string; reason?: string }>;
+  };
+  const wallet = signal as {
+    freshnessDemo?: boolean;
+    decision?: { verdict?: 'GO' | 'NO_GO' | 'UNAVAILABLE'; reasons?: string[] };
+    positions?: Array<{ status?: string; reason?: string }>;
+  };
+
+  const staleRows =
+    mode === 'wallet-risk'
+      ? (wallet.positions ?? []).filter((p) => p.status && p.status !== 'ok')
+      : (lending.protocols ?? []).filter((p) => p.status && p.status !== 'ok');
+  const freshDetail =
+    staleRows.length > 0
+      ? `Freshness reject: ${staleRows
+          .slice(0, 2)
+          .map((p) => p.reason ?? p.status)
+          .join('; ')}${(lending.freshnessDemo || wallet.freshnessDemo) ? ' (demo tip lag)' : ''}`
+      : 'Evaluating _meta block freshness';
+  track('freshness_gate', freshDetail);
 
   const verdict =
     mode === 'wallet-risk'
-      ? ((signal as { decision?: { verdict?: 'GO' | 'NO_GO' | 'UNAVAILABLE' } }).decision
-          ?.verdict ?? 'UNAVAILABLE')
-      : (signal as { decisionHint?: { actionable?: boolean } }).decisionHint?.actionable
-        ? 'GO'
-        : 'UNAVAILABLE';
+      ? (wallet.decision?.verdict ?? 'UNAVAILABLE')
+      : (lending.decision?.verdict ??
+        (lending.decisionHint?.actionable ? 'GO' : 'UNAVAILABLE'));
 
   track('deciding', `Verdict ${verdict}`);
   track('arc_action', 'Arc USDC policy check');
@@ -189,12 +215,22 @@ async function executeRun(
         maxSpendUsdc: process.env.ARC_SPEND_AMOUNT_USDC ?? '0.01',
         treasury: process.env.ARC_TREASURY_ADDRESS?.trim() || null,
         agentWallet: null,
+        stack: 'circle-nanopayments',
       },
     };
   }
 
   const hederaAudit = (signal as { hederaAudit?: unknown }).hederaAudit;
   track('complete', hederaAudit ? `HCS audit ${hederaAudit}` : 'Pipeline finished');
+
+  const rationale =
+    mode === 'wallet-risk'
+      ? wallet.decision?.reasons
+      : lending.decision?.reasons ??
+        [
+          lending.decision?.recommendation?.summary,
+          lending.decisionHint?.summary,
+        ].filter(Boolean);
 
   return {
     mode,
@@ -203,12 +239,7 @@ async function executeRun(
     signal,
     decision: {
       verdict,
-      rationale:
-        mode === 'wallet-risk'
-          ? (signal as { decision?: { reasons?: string[] } }).decision?.reasons
-          : [(signal as { decisionHint?: { summary?: string } }).decisionHint?.summary].filter(
-              Boolean,
-            ) as string[],
+      rationale: (rationale ?? []).filter(Boolean) as string[],
     },
     arc,
     payment: {
@@ -285,22 +316,41 @@ app.post('/api/run/stream', async (req, res) => {
   }
 });
 
+const landingDir = resolve(__dirname, '../../../landing');
+const landingIndex = resolve(landingDir, 'index.html');
+const landingAssets = resolve(landingDir, 'assets');
 const webDist = resolve(__dirname, '../../web/dist');
 const legacyPublic = resolve(__dirname, '../public');
+
+if (existsSync(landingIndex)) {
+  app.get(['/', '/landing', '/landing/'], (_req, res) => {
+    res.sendFile(landingIndex);
+  });
+}
+if (existsSync(landingAssets)) {
+  app.use('/landing/assets', express.static(landingAssets));
+}
+
 if (existsSync(webDist)) {
-  app.use(express.static(webDist));
-  app.use((req, res, next) => {
-    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-    if (req.path.startsWith('/api')) return next();
+  app.use('/demo', express.static(webDist));
+  app.get(['/demo', '/demo/'], (_req, res) => {
     res.sendFile(resolve(webDist, 'index.html'));
   });
+  // Built asset URLs are absolute (/assets/...) from Vite default base
+  app.use(express.static(webDist));
 } else {
+  app.use('/demo', express.static(legacyPublic));
+  app.get(['/demo', '/demo/'], (_req, res) => {
+    res.sendFile(resolve(legacyPublic, 'index.html'));
+  });
   app.use(express.static(legacyPublic));
 }
 
 app.listen(PORT, () => {
-  console.log(`\n🤖 MeteredSignal agent UI on http://localhost:${PORT}`);
+  console.log(`\n🤖 MeteredSignal on http://localhost:${PORT}`);
   console.log(`   Paying from Hedera account ${accountId}`);
   console.log(`   Merchant ${MERCHANT_URL}`);
-  console.log(`   UI: ${existsSync(webDist) ? webDist : legacyPublic}\n`);
+  console.log(`   Landing: http://localhost:${PORT}/`);
+  console.log(`   Demo:    http://localhost:${PORT}/demo`);
+  console.log(`   UI dist: ${existsSync(webDist) ? webDist : legacyPublic}\n`);
 });

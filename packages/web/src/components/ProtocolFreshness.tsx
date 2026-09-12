@@ -15,23 +15,23 @@ export function ProtocolFreshness({ protocols }: { protocols: ProtocolSnapshot[]
         return (
           <div
             key={p.slug}
-            className="rounded-xl border border-[color:var(--line)] bg-white/70 p-3"
+            className="rounded-xl border border-white/15 bg-white/[0.03] p-3"
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="text-sm font-semibold text-[color:var(--ink)]">
+                <div className="text-sm font-semibold text-foreground">
                   {protocolLabel(p.slug)}
                 </div>
-                <div className="font-mono text-[10px] text-[color:var(--ink-soft)]">
+                <div className="font-mono text-[10px] text-muted-foreground">
                   {p.network} · {p.subgraphId.slice(0, 10)}…
                 </div>
               </div>
               <span
                 className={cn(
-                  'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                  p.status === 'ok' && 'bg-emerald-100 text-emerald-800',
-                  p.status === 'stale' && 'bg-amber-100 text-amber-800',
-                  p.status === 'unavailable' && 'bg-rose-100 text-rose-800',
+                  'rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wide uppercase',
+                  p.status === 'ok' && 'border border-[#9ec0ff]/35 bg-[#9ec0ff]/15 text-[#c9daff]',
+                  p.status === 'stale' && 'border border-amber-400/35 bg-amber-500/15 text-amber-200',
+                  p.status === 'unavailable' && 'border border-rose-400/35 bg-rose-500/15 text-rose-200',
                 )}
               >
                 {p.status}
@@ -40,23 +40,23 @@ export function ProtocolFreshness({ protocols }: { protocols: ProtocolSnapshot[]
             {p.status === 'ok' ? (
               <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wide text-[color:var(--ink-soft)]">TVL</dt>
+                  <dt className="font-mono text-[10px] tracking-wide text-muted-foreground uppercase">TVL</dt>
                   <dd className="text-sm font-semibold">{formatUsd(p.totalValueLockedUSD)}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wide text-[color:var(--ink-soft)]">Deposit</dt>
+                  <dt className="font-mono text-[10px] tracking-wide text-muted-foreground uppercase">Deposit</dt>
                   <dd className="text-sm font-semibold">{formatUsd(p.totalDepositBalanceUSD)}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wide text-[color:var(--ink-soft)]">Borrow</dt>
+                  <dt className="font-mono text-[10px] tracking-wide text-muted-foreground uppercase">Borrow</dt>
                   <dd className="text-sm font-semibold">{formatUsd(p.totalBorrowBalanceUSD)}</dd>
                 </div>
               </dl>
             ) : (
-              <p className="mt-2 text-xs text-[color:var(--ink-soft)]">{p.reason ?? 'No data'}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{p.reason ?? 'No data'}</p>
             )}
             {ageSec != null && (
-              <p className="mt-2 font-mono text-[10px] text-[color:var(--ink-soft)]">
+              <p className="mt-2 font-mono text-[10px] text-muted-foreground">
                 block {p.meta?.block.number?.toLocaleString()} · age {ageSec}s
               </p>
             )}

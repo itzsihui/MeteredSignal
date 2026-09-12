@@ -111,7 +111,7 @@ flowchart LR
 
 - [x] Minimal Next.js UI: paste address → agent run log → payment receipts → decision
 - [x] Architecture diagram in README
-- [x] Public GitHub with clear “how each sponsor is load-bearing”
+- [x] Public GitHub with clear “how each sponsor is load-bearing” → [SUBMISSION.md](./SUBMISSION.md)
 
 ### Hour 18–22 — Demo + submit
 
@@ -122,7 +122,7 @@ flowchart LR
 
 ### After submit → Sept 30
 
-- [ ] Keep Arc deployment mainnet-ready for the **$2,500 mainnet unlock** on Arc Agentic / Launch
+- [x] Keep Arc deployment mainnet-ready for the **$2,500 mainnet unlock** on Arc Agentic / Launch — see [ARC_MAINNET.md](./ARC_MAINNET.md)
 
 ---
 

@@ -17,11 +17,34 @@ export type ProtocolSnapshot = {
   totalDepositBalanceUSD?: string;
 };
 
+export type LendingDecision = {
+  verdict: 'GO' | 'NO_GO' | 'UNAVAILABLE';
+  riskScore: number;
+  reasons: string[];
+  recommendation?: {
+    preferSlug: string;
+    preferProtocol: string;
+    summary: string;
+    ranking: Array<{
+      slug: string;
+      protocol: string;
+      tvlUsd: number;
+      borrowUsd: number;
+      depositUsd: number;
+      utilization: number;
+    }>;
+  };
+};
+
 export type LendingCompareResult = {
   queryTemplate: string;
   maxBlockLag: number;
   fetchedAt: string;
+  /** When true, tip lag was injected so the video can show a freshness reject. */
+  freshnessDemo?: boolean;
   protocols: ProtocolSnapshot[];
+  /** Structured agent decision — not a raw Graph dump. */
+  decision: LendingDecision;
   decisionHint: {
     actionable: boolean;
     summary: string;
@@ -33,6 +56,7 @@ export type WalletRiskResult = {
   queryTemplate: string;
   maxBlockLag: number;
   fetchedAt: string;
+  freshnessDemo?: boolean;
   positions: Array<{
     slug: string;
     protocol: string;
@@ -169,9 +193,7 @@ function freshnessStatus(
   if (!meta?.block?.number) {
     return { status: 'unavailable', reason: 'missing _meta.block' };
   }
-  if (meta.deployment && meta.deployment !== expectedDeployment && !meta.deployment.startsWith('0x')) {
-    // Some gateways return ipfs hash vs deployment id — only hard-fail on empty
-  }
+  void expectedDeployment;
   if (typeof tipBlock === 'number') {
     const lag = tipBlock - meta.block.number;
     if (lag > maxBlockLag) {
@@ -186,14 +208,102 @@ function freshnessStatus(
   return { status: 'ok' };
 }
 
+/** Synthetic tip so the real lag gate fires — still uses live `_meta.block.number`. */
+function tipForDemo(meta: GraphMeta | undefined, maxBlockLag: number, forceStale: boolean): number | undefined {
+  if (!forceStale || !meta?.block?.number) return undefined;
+  return meta.block.number + maxBlockLag + 25;
+}
+
+function rankLendingProtocols(ok: ProtocolSnapshot[]): LendingDecision['recommendation'] {
+  const ranking = ok
+    .map((p) => {
+      const tvlUsd = Number(p.totalValueLockedUSD ?? 0);
+      const borrowUsd = Number(p.totalBorrowBalanceUSD ?? 0);
+      const depositUsd = Number(p.totalDepositBalanceUSD ?? 0);
+      const utilization = depositUsd > 0 ? borrowUsd / depositUsd : 0;
+      return {
+        slug: p.slug,
+        protocol: p.protocol,
+        tvlUsd,
+        borrowUsd,
+        depositUsd,
+        utilization,
+      };
+    })
+    .sort((a, b) => b.tvlUsd - a.tvlUsd);
+
+  const best = ranking[0];
+  if (!best) return undefined;
+
+  const utilPct = (best.utilization * 100).toFixed(1);
+  return {
+    preferSlug: best.slug,
+    preferProtocol: best.protocol,
+    summary: `Prefer ${best.slug} — deepest TVL ($${best.tvlUsd.toLocaleString(undefined, {
+      maximumFractionDigits: 0,
+    })}) with ${utilPct}% utilization across Messari-standardized markets.`,
+    ranking,
+  };
+}
+
+function decideLendingCompare(protocols: ProtocolSnapshot[]): LendingDecision {
+  const ok = protocols.filter((p) => p.status === 'ok');
+  const stale = protocols.filter((p) => p.status === 'stale' || p.status === 'unavailable');
+
+  if (ok.length < 2) {
+    const staleBits = stale
+      .map((p) => `${p.slug}: ${p.reason ?? p.status}`)
+      .slice(0, 3)
+      .join('; ');
+    return {
+      verdict: 'UNAVAILABLE',
+      riskScore: 100,
+      reasons: [
+        `Freshness gate: need ≥2 fresh Messari sources; got ${ok.length}/${protocols.length}`,
+        ...(staleBits ? [`Stale/unavailable: ${staleBits}`] : []),
+        'Agent refuses Arc USDC spend until _meta.block freshness recovers',
+      ],
+    };
+  }
+
+  const recommendation = rankLendingProtocols(ok);
+  const top = recommendation?.ranking[0];
+  const second = recommendation?.ranking[1];
+  const reasons: string[] = [
+    `Live standardized scan across ${ok.length} protocols (one Messari query template)`,
+  ];
+  if (recommendation) reasons.push(recommendation.summary);
+  if (top && second) {
+    const delta = top.tvlUsd - second.tvlUsd;
+    reasons.push(
+      `TVL lead vs #2 (${second.slug}): $${delta.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+    );
+  }
+  if (top && top.utilization > 0.9) {
+    reasons.push(
+      `Note: top venue utilization ${(top.utilization * 100).toFixed(1)}% — size cautiously`,
+    );
+  }
+
+  return {
+    verdict: 'GO',
+    riskScore: top && top.utilization > 0.9 ? 45 : 25,
+    reasons,
+    recommendation,
+  };
+}
+
 import { getDeployments, type ProtocolDeployment } from './registry.js';
 
 export async function compareLendingProtocols(opts: {
   apiKey: string;
   maxBlockLag?: number;
   slugs?: string[];
+  /** Inject tip ahead of indexed block so freshness gate fails (demo / video). */
+  forceStale?: boolean;
 }): Promise<LendingCompareResult> {
   const maxBlockLag = opts.maxBlockLag ?? 50;
+  const forceStale = Boolean(opts.forceStale);
   const deployments = getDeployments(opts.slugs);
 
   const protocols: ProtocolSnapshot[] = await Promise.all(
@@ -212,7 +322,8 @@ export async function compareLendingProtocols(opts: {
         }>(d.subgraphId, opts.apiKey, PROTOCOL_QUERY);
 
         const meta = data._meta;
-        const fresh = freshnessStatus(meta, d.subgraphId, maxBlockLag);
+        const tipBlock = tipForDemo(meta, maxBlockLag, forceStale);
+        const fresh = freshnessStatus(meta, d.subgraphId, maxBlockLag, tipBlock);
         const p = data.lendingProtocols?.[0];
         if (fresh.status !== 'ok') {
           return {
@@ -250,18 +361,17 @@ export async function compareLendingProtocols(opts: {
     }),
   );
 
-  const ok = protocols.filter((p) => p.status === 'ok');
+  const decision = decideLendingCompare(protocols);
   return {
     queryTemplate: 'LendingProtocolSnapshot (Messari standardized lending schema)',
     maxBlockLag,
     fetchedAt: new Date().toISOString(),
+    freshnessDemo: forceStale || undefined,
     protocols,
+    decision,
     decisionHint: {
-      actionable: ok.length >= 2,
-      summary:
-        ok.length >= 2
-          ? `Live standardized data from ${ok.length}/${protocols.length} protocols — safe to reason across markets.`
-          : `Only ${ok.length} fresh protocol(s); refuse autonomous spend until ≥2 sources are fresh.`,
+      actionable: decision.verdict === 'GO',
+      summary: decision.reasons[0] ?? decision.verdict,
     },
   };
 }
@@ -271,8 +381,10 @@ export async function assessWalletRisk(opts: {
   address: string;
   maxBlockLag?: number;
   slugs?: string[];
+  forceStale?: boolean;
 }): Promise<WalletRiskResult> {
   const maxBlockLag = opts.maxBlockLag ?? 50;
+  const forceStale = Boolean(opts.forceStale);
   const address = opts.address.toLowerCase();
   const deployments = getDeployments(opts.slugs);
 
@@ -295,7 +407,8 @@ export async function assessWalletRisk(opts: {
           deposits: PosRow[];
         }>(d.subgraphId, opts.apiKey, POSITION_QUERY, { account: address });
 
-        const fresh = freshnessStatus(data._meta, d.subgraphId, maxBlockLag);
+        const tipBlock = tipForDemo(data._meta, maxBlockLag, forceStale);
+        const fresh = freshnessStatus(data._meta, d.subgraphId, maxBlockLag, tipBlock);
         if (fresh.status !== 'ok') {
           return {
             slug: d.slug,
@@ -368,15 +481,26 @@ export async function assessWalletRisk(opts: {
 
   if (fresh.length < 2) {
     verdict = 'UNAVAILABLE';
+    const stale = positions.filter((p) => p.status !== 'ok');
     reasons.push(`Need ≥2 fresh standardized sources; got ${fresh.length}`);
+    for (const p of stale.slice(0, 3)) {
+      reasons.push(`${p.slug}: ${p.reason ?? p.status}`);
+    }
+    reasons.push('Agent refuses Arc USDC spend until _meta.block freshness recovers');
   } else {
     let totalBorrow = 0;
     let totalDeposit = 0;
+    const byProtocol: Array<{ slug: string; borrow: number; deposit: number }> = [];
     for (const p of fresh) {
+      let borrow = 0;
+      let deposit = 0;
       for (const m of p.markets) {
-        totalBorrow += Number(m.borrowedBalanceUSD ?? 0);
-        totalDeposit += Number(m.depositedBalanceUSD ?? 0);
+        borrow += Number(m.borrowedBalanceUSD ?? 0);
+        deposit += Number(m.depositedBalanceUSD ?? 0);
       }
+      totalBorrow += borrow;
+      totalDeposit += deposit;
+      byProtocol.push({ slug: p.slug, borrow, deposit });
     }
     if (totalBorrow > 0 && totalDeposit === 0) {
       riskScore += 40;
@@ -390,8 +514,14 @@ export async function assessWalletRisk(opts: {
       riskScore += 20;
       reasons.push('High borrow/deposit ratio across indexed markets');
     }
+    const hot = byProtocol.filter((p) => p.borrow > 0).sort((a, b) => b.borrow - a.borrow)[0];
+    if (hot) {
+      reasons.push(`Largest borrow pocket: ${hot.slug} (~$${hot.borrow.toFixed(2)})`);
+    }
     if (reasons.length === 0) {
-      reasons.push(`Fresh multi-protocol scan clean (borrow $${totalBorrow.toFixed(2)}, deposit $${totalDeposit.toFixed(2)})`);
+      reasons.push(
+        `Fresh multi-protocol scan clean (borrow $${totalBorrow.toFixed(2)}, deposit $${totalDeposit.toFixed(2)})`,
+      );
     }
     if (riskScore >= 60) verdict = 'NO_GO';
   }
@@ -401,6 +531,7 @@ export async function assessWalletRisk(opts: {
     queryTemplate: 'WalletPositions (Messari standardized lending schema)',
     maxBlockLag,
     fetchedAt: new Date().toISOString(),
+    freshnessDemo: forceStale || undefined,
     positions,
     decision: { verdict, riskScore: Math.min(riskScore, 100), reasons },
   };

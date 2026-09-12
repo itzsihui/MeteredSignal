@@ -13,10 +13,10 @@ import type { ProtocolSnapshot, WalletPosition } from '@/lib/types'
 
 const tipStyle = {
   borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.12)',
-  background: '#0b1220',
+  border: '1px solid rgba(244,244,242,0.14)',
+  background: '#0a0a0a',
   fontSize: 12,
-  color: '#e2e8f0',
+  color: '#f4f4f2',
 }
 
 export function LendingCharts({ protocols }: { protocols: ProtocolSnapshot[] }) {
@@ -52,9 +52,9 @@ export function LendingCharts({ protocols }: { protocols: ProtocolSnapshot[] }) 
           />
           <Tooltip formatter={(value) => formatUsd(Number(value), false)} contentStyle={tipStyle} />
           <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
-          <Bar dataKey="TVL" fill="#14b8a6" radius={[6, 6, 0, 0]} />
-          <Bar dataKey="Deposits" fill="#38bdf8" radius={[6, 6, 0, 0]} />
-          <Bar dataKey="Borrows" fill="#fb923c" radius={[6, 6, 0, 0]} />
+          <Bar dataKey="TVL" fill="#c9daff" radius={[6, 6, 0, 0]} />
+          <Bar dataKey="Deposits" fill="#9ec0ff" radius={[6, 6, 0, 0]} />
+          <Bar dataKey="Borrows" fill="#6b7f9e" radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -90,8 +90,8 @@ export function WalletExposureChart({ positions }: { positions: WalletPosition[]
           <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 10, fill: '#94a3b8' }} />
           <Tooltip formatter={(value) => formatUsd(Number(value), false)} contentStyle={tipStyle} />
           <Legend />
-          <Bar dataKey="Deposit" fill="#38bdf8" radius={[0, 6, 6, 0]} />
-          <Bar dataKey="Borrow" fill="#fb923c" radius={[0, 6, 6, 0]} />
+          <Bar dataKey="Deposit" fill="#9ec0ff" radius={[0, 6, 6, 0]} />
+          <Bar dataKey="Borrow" fill="#6b7f9e" radius={[0, 6, 6, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
