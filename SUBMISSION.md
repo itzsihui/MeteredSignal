@@ -1,6 +1,9 @@
-# MeteredSignal — ETHOnline 2026 submission writeup
+# MeteredSignal — ETHOnline 2026 showcase copy
 
-**One sentence:** An Arc agent buys live multi-protocol DeFi lending intelligence (Messari Standardized Subgraphs) via **x402**, settles on **Hedera (Blocky402)**, then spends **USDC on Arc via Circle Agent Stack nanopayments** only on a GO verdict.
+Paste the two sections below into ETHGlobal (**Project Description** / **How it's Made**).
+
+**Tagline (short):** Less noise. More signal.  
+**One-liner:** x402-metered Graph intelligence for agents — pay on Hedera, spend USDC on Arc only on GO.
 
 **Partners / bounties claimed**
 1. Hedera — AI & Agentic Payments on Hedera  
@@ -11,68 +14,33 @@
 
 ---
 
-## Problem
+## Project Description
 
-Agents that act on DeFi need fresh, cross-protocol lending signal — not a single subgraph dump, not a monthly API key, and not blind USDC spend. Today those pieces are siloed: Graph data is free-to-query but hard for agents to budget; x402 payment rails exist on Hedera but lack real metered data services; Arc Agent Stack wallets can hold USDC but need decision logic tied to live signals. MeteredSignal closes that loop: pay-per-call intelligence → freshness-gated verdict → conditional Circle nanopayment on Arc.
+MeteredSignal is a pay-per-call intelligence market for agents that move capital in DeFi. You do not buy a monthly Graph API seat or dump a single subgraph into a prompt. You buy a metered signal. Before the agent spends, the product only exposes a catalog of priced routes: lending compare or wallet risk, HBAR price, and a freshness contract so you know the data is live. The capital move stays locked until the verdict is GO. That gating is the product. Raw subgraph access is free but hard for agents to budget, and blind USDC transfers treat every call like a green light. MeteredSignal flips both sides at once. Merchants sell standardized Messari lending intelligence as an HTTP 402 service instead of a subscription. Agents get live multi-protocol risk they can afford per call, with a policy so Arc USDC only moves when the signal is fresh and actionable.
 
----
+The agent journey is built around that meter. An Arc-side wallet discovers the free catalog, hits a paywalled merchant route, settles Hedera x402 through Blocky402 without an API key, then receives a paid JSON signal built from Messari Standardized Subgraphs on The Graph — Aave v3, Compound v3, and Spark under one query shape. The merchant runs a freshness gate on `_meta.block`; fewer than two fresh sources means UNAVAILABLE, not a soft maybe. The agent reasons to GO, NO_GO, or UNAVAILABLE, ranks venues by TVL and utilization on lending-compare, and scores cross-protocol borrow exposure on wallet-risk. Only on GO does Circle Agent Stack settle a nanopayment on Arc to the GO-action seller. Identity of the human operator never has to sit in the payment path; the economic actor is the agent wallet. Settlements can append to a Hedera Consensus Service topic so payment is auditable on HashScan, not just logged in memory.
 
-## Architecture
+Merchants get the other half of the loop. An Express service lists metered routes, challenges unpaid GETs with an exact-scheme Hedera 402, queries live GraphQL after settle, and sells a separate Arc USDC GO-action behind Circle Gateway batching. Treasury agents, lending desks, and autonomous spenders all hit the same inventory: one Messari template, two prices (compare cheaper than risk), one freshness policy. Demand can arrive through the demo console or a headless agent, while supply still publishes once.
 
-```
-User goal (NL) → Arc-side agent wallet (Circle GatewayClient)
-        │
-        ├─ GET paywalled merchant  ──HTTP 402──► sign + settle (Blocky402 / Hedera testnet)
-        │                                              │
-        │                                              ▼
-        │                                    Merchant (:4021)
-        │                                    · Messari standardized GraphQL (Aave / Compound / Spark)
-        │                                    · _meta freshness gate (reject stale)
-        │                                    · metered HBAR prices (compare ≠ risk)
-        │                                    · HCS settlement audit topic
-        │                                    · Arc GO seller: Gateway-batched x402 (/v1/arc/usdc/go-action)
-        │                                              │
-        ◄────────────── paid JSON signal ──────────────┘
-        │
-        ▼
-  Verdict: GO / NO_GO / UNAVAILABLE  (+ protocol ranking on lending-compare)
-        │
-        └─ GO only → Circle nanopayment (Gateway deposit/pay, spend cap)
-                     optional native USDC fallback if Gateway fails
-```
+Agent loop: discover → 402 → settle → Graph → freshness → decide → USDC or refuse. Merchant loop: catalog → challenge → query → signal → HCS audit. Arc loop: GO-only nanopay with a spend cap. The whole point is one market that meters truth for buyers and liquidates intelligence as a payable service without spoiling either side.
 
-**Flow in one pass:** discover catalog → Hedera 402 settle → live Graph query → `_meta` freshness → agent reasoning → Arc Circle nanopayment (or refuse).
+Less noise. More signal.
 
 ---
 
-## How each sponsor is load-bearing
+## How it's Made
 
-### The Graph — signal layer (not optional)
+MeteredSignal was built from scratch during ETHOnline as an npm workspaces monorepo. The demo console is a Vite React app with a live SSE pipeline rail. Express owns the merchant and agent surfaces; on Vercel they mount together as one serverless app so `/`, `/demo`, `/api`, and `/v1` ship from a single deployment. A shared `packages/graph` registry pins Messari Standardized Lending deployments and runs the freshness-gated queries. Partner tech is not bolted on for a checklist: each one sits on a critical path in the decision loop.
 
-- **Live Studio / gateway data** — no mocks; Messari Standardized Lending subgraphs.
-- **Composable / standardized** — one query template across **Aave v3, Compound v3, Spark** (registry in `packages/graph`); same schema → N protocols.
-- **AI use (From Scratch)** — agent reasons to GO / NO_GO / UNAVAILABLE; ranks venues by TVL / utilization; refuses autonomous spend if fewer than 2 fresh sources; never dumps raw JSON as the product.
-- **Freshness** — requires `_meta.block.number` / timestamp; pin deployments; return `unavailable` when lag exceeds `GRAPH_MAX_BLOCK_LAG` (demo tip-lag via `forceStale` for the video beat).
+The UX is intentional about failure modes, not just happy paths. The console streams Discover → 402 → Settle → Paid → Graph → Fresh → Decide → USDC → Receipts so judges can watch the meter in real time. A labeled Simulate indexer lag toggle still pays for a live Messari query, then injects tip ahead of `_meta.block` so sources go stale, the verdict becomes UNAVAILABLE, and Arc policy refuses spend — the demo beat that proves the gate is real. Wallet presets drive high-borrow NO_GO versus clean GO without mocking Graph. ArcScan, HashScan, and HCS topic links land next to decoded PAYMENT-RESPONSE payloads so receipts are evidence, not decoration.
 
-Without The Graph, there is no evidence and no verdict.
+Money runs through Hedera x402 and Arc Circle rails, not a custom auth stack. On the intelligence leg, `@x402/express` plus Blocky402 as facilitator challenges unpaid routes; the agent signs with ExactHederaScheme and settles HBAR — about 0.001 for lending-compare and 0.0025 for wallet-risk. On the capital leg, `@circle-fin/x402-batching` GatewayClient pays the merchant’s Gateway-batched GO-action on Arc Testnet (`eip155:5042002`), capped by `ARC_SPEND_AMOUNT_USDC`. Missing Arc keys yield an explicit dry_run instead of a panic spend; an optional native USDC fallback stays behind a flag if Gateway fails. The UI and receipts treat HBAR meter cost and Arc USDC spend as separate ledgers on purpose, because agent demos often die when one rail is funded and the other is not.
 
-### Hedera — payment + audit rail
+The signal layer is The Graph. One Messari query template covers Aave v3 (Ethereum and Arbitrum), Compound v3, and Spark; the agent ranks and decides rather than dumping raw JSON as the product. Freshness requires `_meta` block number and timestamp against `GRAPH_MAX_BLOCK_LAG`. Without Graph there is no evidence and no verdict. Without Hedera and Blocky402 the merchant is not a payable agent service. Without Arc and Circle nanopayments the loop never closes from intelligence to capital under Agent Stack rails.
 
-- **Live x402-gated merchant** on Hedera testnet settled through **Blocky402** (`https://api.testnet.blocky402.com`).
-- **Metered pricing** — lending-compare ≈ 0.001 HBAR; wallet-risk ≈ 0.0025 HBAR (not a flat subscription).
-- **Consumer path** — agent discovers the endpoint, pays without an API key, completes ≥1 real paid request end-to-end.
-- **Extra points** — each settlement appends to an **HCS topic** for a verifiable payment audit trail.
+The audit trail is Hedera Consensus Service. After a paid settle, the merchant can append settlement metadata to an HCS topic so HashScan shows more than a transfer — a verifiable payment history for the metered route. HCS is best-effort: if topic or creds are missing the response still returns, and that is disclosed.
 
-Without Hedera / Blocky402, the merchant is not a payable agent service.
-
-### Arc — economic actor (Circle Agent Stack)
-
-- On Graph **GO**, the agent settles a **Circle nanopayment** with `@circle-fin/x402-batching` (`GatewayClient` buyer → merchant `createGatewayMiddleware` seller on `/v1/arc/usdc/go-action`).
-- **Gasless settlement path for the agent** — Gateway-batched x402 on Arc Testnet (`eip155:5042002`); spend capped by `ARC_SPEND_AMOUNT_USDC` (abort if requirement exceeds cap).
-- **Decision logic tied to real signals** — NO_GO / UNAVAILABLE → spend refused; GO → nanopay (native USDC transfer only as fallback if `ARC_NANOPAY_FALLBACK=true`).
-- **Launch track** — testnet path shipped now; mainnet = env swap before **Sep 30** unlock — see [ARC_MAINNET.md](./ARC_MAINNET.md).
-
-Without Arc + Circle nanopayments, the agent never closes the loop from intelligence to capital under Agent Stack rails.
+The hacky but useful glue is shipping merchant and agent in one Vercel function with a long `maxDuration`, plus demo tip-lag and wallet presets that keep the video cinematic while every Graph query and 402 settle stay live. Mainnet for Arc is an env flip when Circle publishes RPC and chain ID — same GO-only policy, documented in ARC_MAINNET.md for the Launch track unlock. Put together, The Graph supplies the evidence, Hedera meters and audits the call, Arc moves USDC only on GO, and the product in the middle stays what it claims to be: less noise, more signal.
 
 ---
 
@@ -84,14 +52,9 @@ Without Arc + Circle nanopayments, the agent never closes the loop from intellig
 | **Production demo (Vercel)** | https://meteredsignal.vercel.app |
 | Demo UI path | https://meteredsignal.vercel.app/demo |
 | Merchant catalog | https://meteredsignal.vercel.app/v1/catalog |
-| Local (dev) | http://localhost:3001 |
 | Blocky402 facilitator | https://api.testnet.blocky402.com/supported |
 | HCS audit topic | https://hashscan.io/testnet/topic/0.0.10505288 |
-| Demo script | [DEMO.md](./DEMO.md) |
 | Architecture + setup | [README.md](./README.md) |
+| Arc mainnet unlock | [ARC_MAINNET.md](./ARC_MAINNET.md) |
 
-**Live demo hosting:** Production is on **Vercel** (`meteredsignal.vercel.app`) — static landing + `/demo` UI, serverless Express for `/api` + `/v1` (Hedera x402 merchant + agent in one deployment). Env secrets live in the Vercel project; `MERCHANT_URL=https://meteredsignal.vercel.app`.
-
-**Video:** ≤5 min — Arc budget → Hedera 402 settle → multi-protocol Graph + freshness / ranking → GO → Circle nanopayment on ArcScan + HashScan / HCS (see DEMO.md). Include the freshness-fail beat (simulate indexer lag → UNAVAILABLE → refuse spend).
-
-**Mainnet note (Arc):** [ARC_MAINNET.md](./ARC_MAINNET.md) — same decision → Circle nanopayment flow; flip Arc env when mainnet RPC/chain ID publish (unlock by Sep 30).
+**Video beat list:** Arc budget → Hedera 402 settle → multi-protocol Graph + ranking → GO → Circle nanopayment (ArcScan) + HashScan / HCS → then Simulate indexer lag → UNAVAILABLE → refuse spend.
